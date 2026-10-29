@@ -228,6 +228,17 @@ section.catalog { padding: 56px 0; border-top: 1px solid var(--border); }
 .cart-subtotal { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
 .cart-subtotal .label { color: var(--fg-muted); font-size: 13px; }
 .cart-subtotal .amount { font-family: 'JetBrains Mono'; font-size: 22px; font-weight: 700; }
+
+.cart-username { margin-bottom: 14px; }
+.cart-username label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 6px; }
+.cart-username input {
+  width: 100%; background: var(--bg-card); border: 1px solid var(--border-strong); border-radius: 9px;
+  padding: 10px 12px; color: var(--fg); font: inherit; font-size: 14px;
+}
+.cart-username input:focus { outline: none; border-color: var(--flame-1); }
+.cart-username input.invalid { border-color: var(--err); }
+.cart-username .hint { font-size: 11.5px; color: var(--fg-faint); margin-top: 5px; }
+.cart-username .hint.err { color: var(--err); }
 .checkout-btn {
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 13px; border-radius: 10px; border: none; cursor: pointer;
@@ -329,6 +340,11 @@ footer .secure { display: inline-flex; align-items: center; gap: 6px; margin-top
       <span class="label">Subtotal</span>
       <span class="amount mono" id="cartSubtotal">$0.00</span>
     </div>
+    <div class="cart-username">
+      <label for="mcUsername">Your Minecraft Username</label>
+      <input type="text" id="mcUsername" placeholder="e.g. VPowercpvp" autocomplete="off" spellcheck="false" maxlength="16">
+      <div class="hint" id="mcUsernameHint">Required to continue - this is who your purchase gets delivered to in-game.</div>
+    </div>
     <button class="checkout-btn" id="checkoutBtn" type="button" disabled>Checkout with Tebex</button>
     <div class="cart-status" id="cartStatus"></div>
   </div>
@@ -381,7 +397,9 @@ const CRATES = [
 // per-browser only, same caveat every localStorage use on this kind of page has (a
 // different device/browser starts with an empty cart).
 const CART_STORAGE_KEY = 'royalsmp_cart_v1';
+const USERNAME_STORAGE_KEY = 'royalsmp_mc_username';
 let cart = loadCart();
+let mcUsername = loadUsername();
 
 function loadCart() {
   try {
@@ -399,6 +417,30 @@ function saveCart() {
     // Private browsing / storage disabled - cart still works for this page view,
     // it just won't survive a refresh. Not worth surfacing as an error.
   }
+}
+
+function loadUsername() {
+  try {
+    return localStorage.getItem(USERNAME_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function saveUsername(name) {
+  try {
+    localStorage.setItem(USERNAME_STORAGE_KEY, name);
+  } catch {
+    // Same private-browsing caveat as saveCart - not worth surfacing.
+  }
+}
+
+// Real Minecraft Java usernames: 3-16 characters, letters/digits/underscore only.
+// Doesn't verify the account actually exists (that needs Mojang's API, server-side
+// - Tebex's own hosted checkout page does that check for real before fulfillment
+// ever runs), just rejects obviously-wrong input before it reaches checkout.
+function isValidUsername(name) {
+  return /^[A-Za-z0-9_]{3,16}$/.test(name);
 }
 
 function cartKey(category, id) {
@@ -549,8 +591,28 @@ function renderCart() {
   }
 
   subtotalEl.textContent = formatCents(cartSubtotalCents());
-  checkoutBtn.disabled = cart.length === 0;
+  updateCheckoutState();
   setCartStatus('');
+}
+
+// Checkout needs a non-empty cart AND a username that at least looks real -
+// re-run on every cart change and every keystroke in the username field, same
+// "button reflects current validity, not just at submit time" idiom the rest of
+// this page's disabled-state buttons already use.
+function updateCheckoutState() {
+  const input = document.getElementById('mcUsername');
+  const hint = document.getElementById('mcUsernameHint');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  const typed = input.value.trim();
+  const valid = isValidUsername(typed);
+
+  input.classList.toggle('invalid', typed.length > 0 && !valid);
+  hint.classList.toggle('err', typed.length > 0 && !valid);
+  hint.textContent = typed.length > 0 && !valid
+    ? 'That doesn’t look like a real Minecraft username (3-16 letters, numbers or underscores).'
+    : 'Required to continue - this is who your purchase gets delivered to in-game.';
+
+  checkoutBtn.disabled = cart.length === 0 || !valid;
 }
 
 function setCartStatus(message, kind) {
@@ -572,6 +634,14 @@ document.getElementById('cartBtn').addEventListener('click', () => { renderCart(
 document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
 document.getElementById('cartOverlay').addEventListener('click', closeCart);
 
+const usernameInput = document.getElementById('mcUsername');
+usernameInput.value = mcUsername;
+usernameInput.addEventListener('input', () => {
+  mcUsername = usernameInput.value.trim();
+  saveUsername(mcUsername);
+  updateCheckoutState();
+});
+
 // ---------- checkout (Tebex Headless API) ----------
 // Flow: create a basket, add every cart line as a package, then send the player to
 // the basket's own Tebex-hosted checkout link to pay - the Headless API's
@@ -583,6 +653,11 @@ document.getElementById('cartOverlay').addEventListener('click', closeCart);
 async function checkout() {
   if (cart.length === 0) return;
 
+  if (!isValidUsername(mcUsername)) {
+    setCartStatus('Enter a valid Minecraft username above to continue.', 'err');
+    document.getElementById('mcUsername').focus();
+    return;
+  }
   if (!TEBEX_PUBLIC_TOKEN) {
     setCartStatus('Checkout isn’t configured yet - contact the server owner.', 'err');
     return;
@@ -599,6 +674,13 @@ async function checkout() {
 
   const base = 'https://headless.tebex.io/api';
   try {
+    // username pre-fills/attributes the basket to this Minecraft account per
+    // Tebex's own Headless API basket-creation docs (a Minecraft-type basket
+    // takes it directly in this same public-token-authenticated call - verify
+    // against Tebex's current docs if this stops working, they've renamed basket
+    // fields before). custom.minecraft_username is a redundant copy for your own
+    // records/support lookups regardless of whether Tebex also re-verifies the
+    // account on its own hosted checkout page.
     const basketRes = await fetch(`${base}/accounts/${TEBEX_PUBLIC_TOKEN}/baskets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -606,6 +688,8 @@ async function checkout() {
         complete_url: location.href,
         cancel_url: location.href,
         complete_auto_redirect: true,
+        username: mcUsername,
+        custom: { minecraft_username: mcUsername },
       }),
     });
     if (!basketRes.ok) throw new Error('Failed to create basket (' + basketRes.status + ')');
@@ -629,7 +713,7 @@ async function checkout() {
   } catch (err) {
     console.error(err);
     setCartStatus('Checkout failed - please try again or contact the server owner.', 'err');
-    checkoutBtn.disabled = cart.length === 0;
+    updateCheckoutState();
   }
 }
 document.getElementById('checkoutBtn').addEventListener('click', checkout);
