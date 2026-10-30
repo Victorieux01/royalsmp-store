@@ -363,11 +363,10 @@ const TEBEX_PUBLIC_TOKEN = null;
 
 // packageId: the numeric Package ID from this item's Tebex package (Tebex Creator
 // Panel -> Store -> Packages -> that package -> ID in the URL/details). null until
-// that package exists in Tebex, same reasoning the old single-item checkoutUrl
-// fields used - a null id renders as a disabled "Coming Soon" button, and the cart
-// refuses to check out while any configured item is missing one, rather than ever
-// presenting checkout as working before it actually is. See the setup notes handed
-// to the server owner separately.
+// that package exists in Tebex. Adding to cart works regardless of packageId (it's
+// just a client-side list), but checkout() below refuses to proceed while any cart
+// item is missing one, rather than ever presenting checkout as working before it
+// actually is. See the setup notes handed to the server owner separately.
 const RANKS = [
   { id: 'spark',   name: 'SPARK',   color: '#ffd23f', price: '$1.00',  desc: 'A spark to start with - your first flame in chat.', packageId: null },
   { id: 'pumpkin', name: 'PUMPKIN', color: '#ff9f1c', price: '$3.50',  desc: 'Seasonal and proud of it. Glows bright orange.', packageId: null },
@@ -501,9 +500,6 @@ function cartSubtotalCents() {
 
 // ---------- rendering: catalog ----------
 function cartButton(category, item) {
-  if (!item.packageId) {
-    return `<span class="buy" aria-disabled="true" title="Not available yet">Coming Soon</span>`;
-  }
   const inCart = findCartItem(category, item.id);
   if (inCart && inCart.qty >= inCart.maxQty) {
     return `<span class="buy in-cart">In Cart ✓</span>`;
