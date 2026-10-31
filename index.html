@@ -368,25 +368,25 @@ const TEBEX_PUBLIC_TOKEN = '155n1-b3af0cedfc38ea0b0cccd8496c75f94ff84ecfde';
 // item is missing one, rather than ever presenting checkout as working before it
 // actually is. See the setup notes handed to the server owner separately.
 const RANKS = [
-  { id: 'spark',   name: 'SPARK',   color: '#ffd23f', price: '$1.00',  desc: 'A spark to start with - your first flame in chat.', packageId: null },
-  { id: 'pumpkin', name: 'PUMPKIN', color: '#ff9f1c', price: '$3.50',  desc: 'Seasonal and proud of it. Glows bright orange.', packageId: null },
-  { id: 'inferno', name: 'INFERNO', color: '#ff5a3c', price: '$2.50',  desc: 'Burns red-hot through every message you send.', packageId: null },
-  { id: 'grim',    name: 'GRIM',    color: '#c084fc', price: '$4.50',  desc: 'A quiet, eerie purple that precedes you.', packageId: null },
-  { id: 'nova',    name: 'NOVA',    color: '#ff3b3b', price: '$8.00',  desc: 'Deep flame-red, worn by those who’ve earned it.', packageId: null },
-  { id: 'astral',  name: 'ASTRAL',  color: '#5ee8e0', price: '$11.50', desc: 'The top of the ladder. Cold, bright, unmistakable.', packageId: null },
+  { id: 'spark',   name: 'SPARK',   color: '#ffd23f', price: '$1.00',  desc: 'A spark to start with - your first flame in chat.', packageId: 7780009 },
+  { id: 'pumpkin', name: 'PUMPKIN', color: '#ff9f1c', price: '$3.50',  desc: 'Seasonal and proud of it. Glows bright orange.', packageId: 7780017 },
+  { id: 'inferno', name: 'INFERNO', color: '#ff5a3c', price: '$2.50',  desc: 'Burns red-hot through every message you send.', packageId: 7780013 },
+  { id: 'grim',    name: 'GRIM',    color: '#c084fc', price: '$4.50',  desc: 'A quiet, eerie purple that precedes you.', packageId: 7780019 },
+  { id: 'nova',    name: 'NOVA',    color: '#ff3b3b', price: '$8.00',  desc: 'Deep flame-red, worn by those who’ve earned it.', packageId: 7780020 },
+  { id: 'astral',  name: 'ASTRAL',  color: '#5ee8e0', price: '$11.50', desc: 'The top of the ladder. Cold, bright, unmistakable.', packageId: 7780022 },
 ];
 
 const RUBY_PACKS = [
-  { id: 'rubies-300',  amount: 300,  price: '$1.50', badge: null },
-  { id: 'rubies-600',  amount: 600,  price: '$2.50', badge: null },
-  { id: 'rubies-1200', amount: 1200, price: '$5.99', badge: null },
-  { id: 'rubies-2400', amount: 2400, price: '$9.99', badge: 'Best Value' },
-].map(p => ({ ...p, packageId: null }));
+  { id: 'rubies-300',  amount: 300,  price: '$1.50', badge: null, packageId: 7780024 },
+  { id: 'rubies-600',  amount: 600,  price: '$2.50', badge: null, packageId: 7780025 },
+  { id: 'rubies-1200', amount: 1200, price: '$5.99', badge: null, packageId: 7780026 },
+  { id: 'rubies-2400', amount: 2400, price: '$9.99', badge: 'Best Value', packageId: 7780029 },
+];
 
 const CRATES = [
-  { id: 'spawner', name: 'Spawner Crate', color: '#7dd87d', price: '$2.50', desc: 'Blaze, Skeleton, Iron Golem, Zombie or Spider spawner.', packageId: null },
-  { id: 'drill',   name: 'Drill Crate',   color: '#5ec9e8', price: '$3.99', desc: 'A 3x3 up to a 9x9 mining drill pickaxe, timed 48h down to 5h.', packageId: null },
-  { id: 'inferno', name: 'Inferno Crate', color: '#ffb347', price: '$4.50', desc: 'The exclusive Inferno Elytra/Spear, or a piece of trimmed Inferno netherite armor.', packageId: null },
+  { id: 'spawner', name: 'Spawner Crate', color: '#7dd87d', price: '$2.50', desc: 'Blaze, Skeleton, Iron Golem, Zombie or Spider spawner.', packageId: 7780034 },
+  { id: 'drill',   name: 'Drill Crate',   color: '#5ec9e8', price: '$3.99', desc: 'A 3x3 up to a 9x9 mining drill pickaxe, timed 48h down to 5h.', packageId: 7780041 },
+  { id: 'inferno', name: 'Inferno Crate', color: '#ffb347', price: '$4.50', desc: 'The exclusive Inferno Elytra/Spear, or a piece of trimmed Inferno netherite armor.', packageId: 7780048 },
 ];
 
 // ---------- cart state ----------
