@@ -251,6 +251,38 @@ section.catalog { padding: 56px 0; border-top: 1px solid var(--border); }
 .cart-status.err { color: var(--err); }
 .cart-status.info { color: var(--fg-faint); }
 
+/* ---------- rank details modal ---------- */
+.rank-modal {
+  position: fixed; top: 50%; left: 50%; z-index: 31;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(600px, calc(100vh - 64px));
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 22px;
+  transform: translate(-50%, -48%) scale(0.98);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .2s, opacity .2s;
+}
+.rank-modal.open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+.rank-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.rank-modal-name { font-family: 'Bebas Neue'; font-size: 28px; letter-spacing: 0.03em; }
+.rank-modal-banner {
+  display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--flame-1); background: rgba(254,140,0,.1); border: 1px solid var(--border-strong);
+  padding: 4px 10px; border-radius: 999px; margin: 8px 0 4px;
+}
+.rank-modal-banner:empty { display: none; }
+.rank-modal-perks { list-style: none; margin: 14px 0 18px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.rank-modal-perks li { font-size: 14px; color: var(--fg-muted); display: flex; gap: 8px; }
+.rank-modal-perks li::before { content: "»"; color: var(--card-accent, var(--flame-1)); font-weight: 700; }
+.rank-modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+.rank-modal-footer .price small { font-size: 12px; color: var(--fg-faint); font-weight: 500; }
+.rank-name-btn { background: none; border: none; padding: 0; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.rank-name-btn:hover { text-decoration: underline; }
+
 /* ---------- footer ---------- */
 footer { border-top: 1px solid var(--border); padding: 32px 0 48px; text-align: center; color: var(--fg-faint); font-size: 12.5px; }
 footer .secure { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--fg-muted); }
@@ -293,7 +325,7 @@ footer .secure { display: inline-flex; align-items: center; gap: 6px; margin-top
       <div>
         <p class="eyebrow">Name Prefixes</p>
         <h2>Ranks</h2>
-        <p>A bold, colored word that burns in front of your name everywhere it shows - chat, the tab list, your nametag. One-time purchase, yours forever.</p>
+        <p>A bold, colored word that burns in front of your name everywhere it shows - chat, the tab list, your nametag. A 60-day subscription that renews automatically. Click a rank's name for its full perk list.</p>
       </div>
     </div>
     <div class="grid" id="ranksGrid"></div>
@@ -350,6 +382,21 @@ footer .secure { display: inline-flex; align-items: center; gap: 6px; margin-top
   </div>
 </div>
 
+<!-- ---------- rank details modal ---------- -->
+<div class="cart-overlay" id="rankOverlay"></div>
+<div class="rank-modal" id="rankModal" role="dialog" aria-modal="true" aria-label="Rank details">
+  <div class="rank-modal-head">
+    <div class="rank-modal-name" id="rankModalName"></div>
+    <button class="cart-close" id="rankModalCloseBtn" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="rank-modal-banner" id="rankModalBanner"></div>
+  <ul class="rank-modal-perks" id="rankModalPerks"></ul>
+  <div class="rank-modal-footer">
+    <div class="price mono" id="rankModalPrice"></div>
+    <div id="rankModalButton"></div>
+  </div>
+</div>
+
 <script>
 document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -368,12 +415,24 @@ const TEBEX_PUBLIC_TOKEN = '155n1-b3af0cedfc38ea0b0cccd8496c75f94ff84ecfde';
 // item is missing one, rather than ever presenting checkout as working before it
 // actually is. See the setup notes handed to the server owner separately.
 const RANKS = [
-  { id: 'spark',   name: 'SPARK',   color: '#ffd23f', price: '$1.00',  desc: 'A spark to start with - your first flame in chat.', packageId: 7780009 },
-  { id: 'pumpkin', name: 'PUMPKIN', color: '#ff9f1c', price: '$3.50',  desc: 'Seasonal and proud of it. Glows bright orange.', packageId: 7780017 },
-  { id: 'inferno', name: 'INFERNO', color: '#ff5a3c', price: '$2.50',  desc: 'Burns red-hot through every message you send.', packageId: 7780013 },
-  { id: 'grim',    name: 'GRIM',    color: '#c084fc', price: '$4.50',  desc: 'A quiet, eerie purple that precedes you.', packageId: 7780019 },
-  { id: 'nova',    name: 'NOVA',    color: '#ff3b3b', price: '$8.00',  desc: 'Deep flame-red, worn by those who’ve earned it.', packageId: 7780020 },
-  { id: 'astral',  name: 'ASTRAL',  color: '#5ee8e0', price: '$11.50', desc: 'The top of the ladder. Cold, bright, unmistakable.', packageId: 7780022 },
+  { id: 'spark',   name: 'SPARK',   color: '#ffd23f', price: '$1.00',  desc: 'A spark to start with - your first flame in chat.', packageId: 7780009,
+    banner: null, perks: ['3x Homes', '2x Player Vaults', '15x AH Slots', '7x Order Listings',
+      'Priority Queue', 'Quicker RTP Cooldown', '/enderchest', '/anvil', '/craft', 'Unique Discord Role'] },
+  { id: 'pumpkin', name: 'PUMPKIN', color: '#ff9f1c', price: '$3.50',  desc: 'Seasonal and proud of it. Glows bright orange.', packageId: 7780017,
+    banner: 'EXCLUSIVE HALLOWEEN TAG', perks: ['Pumpkin kit', '5x Homes', '4x Player Vaults', '25x AH Slots', '13x Order Listings',
+      'Priority Queue', 'Quicker RTP Cooldown', '/trash', '/enderchest', '/anvil', '/craft', 'Unique Discord Role'] },
+  { id: 'inferno', name: 'INFERNO', color: '#ff5a3c', price: '$2.50',  desc: 'Burns red-hot through every message you send.', packageId: 7780013,
+    banner: null, perks: ['Inferno kit', '4x Homes', '3x Player Vaults', '20x AH Slots', '10x Order Listings',
+      'Priority Queue', 'Quicker RTP Cooldown', '/trash', '/enderchest', '/anvil', '/craft', 'Unique Discord Role'] },
+  { id: 'grim',    name: 'GRIM',    color: '#c084fc', price: '$4.50',  desc: 'A quiet, eerie purple that precedes you.', packageId: 7780019,
+    banner: null, perks: ['Grim kit', '5x Homes', '4x Player Vaults', '25x AH Slots', '13x Order Listings',
+      'Priority Queue', 'Quicker RTP Cooldown', '/trash', '/enderchest', '/anvil', '/craft', 'Unique Discord Role'] },
+  { id: 'nova',    name: 'NOVA',    color: '#ff3b3b', price: '$8.00',  desc: 'Deep flame-red, worn by those who’ve earned it.', packageId: 7780020,
+    banner: 'FREE SPAWNER CRATE', perks: ['Nova kit', '6x Homes', '5x Player Vaults', '30x AH Slots', '18x Order Listings',
+      'Priority Queue', 'Quicker RTP Cooldown', '/trash', '/enderchest', '/anvil', '/craft', '/smithingtable', 'Unique Discord Role'] },
+  { id: 'astral',  name: 'ASTRAL',  color: '#5ee8e0', price: '$11.50', desc: 'The top of the ladder. Cold, bright, unmistakable.', packageId: 7780022,
+    banner: 'FREE DRILL CRATE', perks: ['Astral kit', '8x Homes', '7x Player Vaults', '35x AH Slots', '25x Order Listings',
+      'Priority Queue', 'Quicker RTP Cooldown', '/trash', '/enderchest', '/anvil', '/craft', '/smithingtable', 'Unique Discord Role'] },
 ];
 
 const RUBY_PACKS = [
@@ -450,7 +509,8 @@ function findCartItem(category, id) {
   return cart.find(c => c.key === cartKey(category, id));
 }
 
-// Ranks are a one-time cosmetic unlock per account, so they cap at qty 1 (the card
+// Ranks are a single 60-day subscription per account (re-buying the same one
+// doesn't stack duration, Tebex just renews it), so they cap at qty 1 (the card
 // shows "In Cart" instead of a quantity stepper once added) - Rubies/Crates are
 // consumable, so those allow stacking multiple of the same item.
 function addToCart(category, item) {
@@ -468,6 +528,7 @@ function addToCart(category, item) {
   saveCart();
   renderCatalogButtons();
   renderCart();
+  closeRankModal();
   openCart();
 }
 
@@ -511,15 +572,40 @@ function renderRanks() {
   document.getElementById('ranksGrid').innerHTML = RANKS.map(r => `
     <div class="card" style="--card-accent:${r.color}">
       <div class="top-rule"></div>
-      <div class="name" style="color:${r.color}">${r.name}</div>
+      ${r.banner ? `<div class="badge">${r.banner}</div>` : ''}
+      <button class="rank-name-btn name" style="color:${r.color}" type="button" onclick="openRankModal('${r.id}')">${r.name}</button>
       <div class="desc">${r.desc}</div>
       <div class="meta">
-        <div class="price mono">${r.price}</div>
+        <div class="price mono">${r.price}<small> / 60 days</small></div>
         ${cartButton('ranks', r)}
       </div>
     </div>
   `).join('');
 }
+
+// ---------- rank details modal ----------
+function openRankModal(id) {
+  const rank = RANKS.find(r => r.id === id);
+  if (!rank) return;
+
+  document.getElementById('rankModalName').textContent = rank.name;
+  document.getElementById('rankModalName').style.color = rank.color;
+  document.getElementById('rankModalBanner').textContent = rank.banner || '';
+  document.getElementById('rankModalPerks').innerHTML = rank.perks
+    .map(p => `<li>Access to ${p}</li>`).join('');
+  document.getElementById('rankModalPrice').innerHTML = `${rank.price}<small> / 60 days</small>`;
+  document.getElementById('rankModalButton').innerHTML = cartButton('ranks', rank);
+  document.getElementById('rankModal').style.setProperty('--card-accent', rank.color);
+
+  document.getElementById('rankOverlay').classList.add('open');
+  document.getElementById('rankModal').classList.add('open');
+}
+function closeRankModal() {
+  document.getElementById('rankOverlay').classList.remove('open');
+  document.getElementById('rankModal').classList.remove('open');
+}
+document.getElementById('rankModalCloseBtn').addEventListener('click', closeRankModal);
+document.getElementById('rankOverlay').addEventListener('click', closeRankModal);
 
 function renderRubies() {
   document.getElementById('rubiesGrid').innerHTML = RUBY_PACKS.map(p => `
